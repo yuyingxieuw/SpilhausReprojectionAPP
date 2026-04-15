@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <TileMap version="1.0.0" tilemapservice="http://tms.osgeo.org/1.0.0">
+      <Title>Map8.12.tif</Title>
+      <Abstract></Abstract>
+      <SRS>ESRI:54099</SRS>
+      <BoundingBox minx="-16857702.71589948982000" miny="-17212325.96264514327049" maxx="17289853.05215328931808" maxy="16935229.80540763586760"/>
+      <Origin x="-16857702.71589948982000" y="-17212325.96264514327049"/>
+      <TileFormat width="256" height="256" mime-type="image/png" extension="png"/>
+      <TileSets profile="raster">
+        <TileSet href="0" units-per-pixel="213422.22355032988708" order="0"/>
+        <TileSet href="1" units-per-pixel="106711.11177516494354" order="1"/>
+        <TileSet href="2" units-per-pixel="53355.55588758247177" order="2"/>
+        <TileSet href="3" units-per-pixel="26677.77794379123588" order="3"/>
+      </TileSets>
+    </TileMap>
+    

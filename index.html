@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"/>
+    
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+    <!-- proj4 and spilhaus plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.19.10/proj4.js"></script>
+    <!-- proj4leaflet -->
+    <script src="https://unpkg.com/proj4leaflet@1.0.2/src/proj4leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js"></script>
+
+    <!-- map script cod Defer -->
+    <!-- <script defer src="script/script-proj.js"></script> -->
+    <script defer src="interface.js"></script>
+
+    <title>Spilhaus Projection Widget</title>
+  </head>
+  <body>
+
+    <!-- map part -->
+    <div class = "map-container">
+        <div id="mapSpilhaus"></div>
+        <div id="mapWgs"></div>
+    </div>
+
+  </body>
+</html>
