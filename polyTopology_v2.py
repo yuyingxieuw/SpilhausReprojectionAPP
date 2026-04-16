@@ -31,7 +31,7 @@ def find_direct_parents(polygons):
     """
 
     if check_valid(polygons) is False:
-        return None, None, None
+        return [None], [None]
     
     tree = STRtree(polygons)
     parent = [None] * len(polygons)

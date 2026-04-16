@@ -125,12 +125,24 @@ def label_inter_number(gdf_exploded):
     
     def report(result):
         has_interior = result.index[result['has_interior']]
+        has_interior_list = has_interior.tolist()
+        if has_interior_list:
+            interior_has_inter = result.loc[result['interior_inter']>0, ['interior_inter']]
+        else:
+            interior_has_inter = None
+
         exterior_has_inter = result.loc[result['exterior_inter']>0, ['exterior_inter']]
-        
+        # exterior_has_inter_df = result[result['exterior_inter']>0]
+        # exterior_has_inter_df=exterior_has_inter_df.drop(columns=['exterior'])
+        # exterior_has_inter_df.to_file("ExteriorInter.geojson", driver = "GeoJSON")
+
         print ("---------ndex list of polygon has interior----------")
-        print(has_interior)
+        print(has_interior_list)
         print("-----------Exterior has intersection with boundary: Index and Number----------")
         print(exterior_has_inter)
+        print("-----------Interior has intersection with boundary: Index and Number----------")
+        print(interior_has_inter)
+
     report(gdf_inter)
 
     return gdf_inter 
@@ -168,48 +180,23 @@ def repair_geodataframe(gdf):
     2. run repair script (take Ring get MultiPolygon or Polygon)
     3. return valid repaired geodataframe
     """
-    repaired_geoms = []
+    # deal with exterior
+    exterior_repaired = []
     for _, row in gdf.iterrows():
         inter_number = row["exterior_inter"]
         exterior_ring = row["exterior_54099"]
-
-        # deal with exterior
         if inter_number == 0:
-            try:
-                fixed_exterior = Polygon(exterior_ring)
-            except Exception as e:
-                fixed_exterior = None
-                logger.error ("Fail to make an exterior to Polygon: %s", e)
-                continue
+            exterior_repaired.append(Polygon(exterior_ring))
+            continue
 
-        elif inter_number != 0:
-            fixed_exterior = remake_polygon_for_ring(exterior_ring, inter_number)
-            if fixed_exterior is False:
-                fixed_exterior = None
-                logger.error("Recheck exterior ring; Failed to cut.", )
-                continue
-        final_exterior = fixed_exterior
-
-        # deal with hole
-        interior_54099_list = row["interior_54099"]
-
-        if interior_54099_list:
-            interior_inter_list = row["interior_inter"]
-            exterior_has_hole = fixed_exterior
-
-            for i, interior in enumerate(interior_54099_list):
-                interior_inter_number = interior_inter_list[i]
-                if interior_inter_number != 0:
-                    fixed_hole = remake_polygon_for_ring(interior, interior_inter_number)
-                    if fixed_hole is not False:
-                        exterior_has_hole = exterior_has_hole.difference(fixed_hole)
-            final_exterior = exterior_has_hole
-
-        repaired_geoms.append(final_exterior)
-        merged_repaired_geom = unary_union([g for g in repaired_geoms if g is not None])
-
+        #inter_number ！= 0
+        fixed_exterior = remake_polygon_for_ring(exterior_ring, inter_number)
+        if fixed_exterior is None:
+            logger.error("Recheck exterior ring; Failed to cut. Put None")
+        exterior_repaired.append(fixed_exterior)
+                      
     gdf = gdf.copy()
-    gdf["repaired_geom"] = merged_repaired_geom
+    gdf["repaired_geom"] = exterior_repaired
     column_drop = ['geometry','has_interior','exterior_inter', 'interior_inter', 'exterior_54099', 'interior_54099', 'exterior', 'interior']
     gdf_processed = gdf.drop(column_drop, axis=1)
     gdf_processed = gdf_processed.set_geometry('repaired_geom')

@@ -1,10 +1,10 @@
 """
-Script to repair Costa_Rica
+Script to repair ring
 """
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import LineString, MultiPolygon, Polygon, Point
+from shapely.geometry import LineString, MultiPolygon, Polygon
 from shapely import get_coordinates
 from two_line_corner_closure_v3 import making_closure_polygon
 from polyTopology_v2 import find_direct_parents, rebuild_with_holes
@@ -14,21 +14,25 @@ from polyTopology_v2 import find_direct_parents, rebuild_with_holes
 logger = logging.getLogger(__name__)
 
 
-def cut_polygon_to_line(ring, inter_number) ->list[tuple]:
+def cut_ring_to_parts(ring, inter_number) ->list[tuple]:
     """
-    cut polygon to lines based on sign/x/y change
-    ring: valid LinearRing
-    inter_number: how many part should be cut
-    return: list of [LineString, or Point, or None]
+    1. get cut polygon to lines based on sign/x/y change
+    2. ring: valid LinearRing
+    3. inter_number: how many part should be cut, int
+    4. return: list of coords; length of the list should equal to the (inter_number +1)
+    Note:
+    1. should take a valid linear ring(must have a minimum of 4 coordinate tuples)
     """
-    # need another input: how many lines does it need to be cut 2 or 3 
-
+    # inter_number should > 0 
+    if inter_number < 1:
+        raise ValueError("Intersection number need > 0")
+ 
     # make it list of coords 
     coords = get_coordinates(ring).tolist()
 
     # find idx where the point has the biggest distance with next point a , b
     # p1 line[:]
-    logger.info("Cutting coords based on No of intersection: %d.", inter_number)
+    logger.info("Cutting coords based on No%d of intersection point.", inter_number)
     all_xy = list(coords)
     arr = np.array(all_xy)
     next_arr = np.roll(arr, -1, axis=0)
@@ -38,130 +42,94 @@ def cut_polygon_to_line(ring, inter_number) ->list[tuple]:
     top_idx_sorted = np.sort(top_idx)
     logger.info ("max change index: %s", top_idx_sorted)
 
-    # result is a list of list of separated coords
+    # result is separted ring -> a list of list of separated coords
     result = []
     start = 0
     for idx in top_idx_sorted:
         result.append(coords[start:idx+1])
         start = idx + 1
     result.append(coords[start:])
-    logger.info("len of list of cutted lines: %s", len(result))
+    
+    return result
 
-    # use build part function to reorganize list of coords to 
-    if len(result) == 3:
-        p1, p2, p3 = result
-        line_1 = p2
-        line_2 = p3+p1
-        result_1 = None
-        result_2 = None
-        if len(line_1) > 1:
-            result_1 = LineString(line_1)
-        elif len(line_1) == 1:
-            result_1 = Point(line_1)
 
-        if len(line_2) > 1:
-            result_2 = LineString(line_2)
-        elif len(line_2) == 1:
-            result_2 = Point(line_2)
 
-        return [result_1, result_2]
+def ring_parts_to_linestring(ring_seprated):
+    """
+    1. take seprated part of rings
+    2. reorgnize coords based on sequence
+    eg: p1, p2, p3 -> p2, p3+p1
+    3. drop Point, only save LineString(At least 2 coordinate tuples)
+    4. return list of shapely object: [LineString, LineString, ...] or []
+    """
+    # double check result
+    if len(ring_seprated) <2:
+        logger.error("Cut Ring Error.")
+        return []
     
-    if len(result) == 4:
-        p1, p2, p3, p4 = result
-        line_1 = p2
-        line_2 = p3
-        line_3 = p4+ p1
-        return [LineString(line_1), LineString(line_2),LineString(line_3)]
+    # reorgnize coords
+    p1= ring_seprated[0]
+    new_ring_sep = list(ring_seprated[1:])
+    new_ring_sep[-1] = new_ring_sep[-1]+p1
     
-    if len(result) == 5:
-        p1, p2, p3, p4, p5 = result
-        line_1 = p2
-        line_2 = p3
-        line_3 = p4
-        line_4 = p5+ p1
-        return [LineString(line_1), LineString(line_2),LineString(line_3), LineString(line_4)]
-    
-    if len(result) == 6:
-        p1, p2, p3, p4, p5, p6 = result
-        line_1 = p2
-        line_2 = p3
-        line_3 = p4
-        line_4 = p5
-        line_5 = p6+ p1
-        return [LineString(line_1), LineString(line_2),LineString(line_3), LineString(line_4), LineString(line_5)]
-    
-    logger.error("cutting line based one distance change error, double check")
-    return False
+    # drop Point and export LineString
+    final_ring_sep = []
+    for part in new_ring_sep:
+        if len(part) == 1:
+            continue
+        if len(part) < 1:
+            logger.error("Cut Ring Error.")
+            continue
+        final_ring_sep.append(LineString(part))
+
+    logger.info("Finished cut. Number of valid lines: %s", len(final_ring_sep))
+    return final_ring_sep
    
+
 
 def remake_polygon_for_ring(ring, inter_number):
     """
-    cut line and make closure for each
-    input: ring
-    output: MultiPolygon/ False
+    main workflow function
+    1. take a valid ring and cut_ring_to_parts
+    2. run ring_parts_to_linestring
+    3. run remake polygon for linestring
+    4. return multipolygon or polygon or none
     """
     
-    result = cut_polygon_to_line(ring, inter_number)
-    if result is False:
-        logger.error("Cut failed")
-        return False
+    ring_sep = cut_ring_to_parts(ring, inter_number)
+    result = ring_parts_to_linestring(ring_sep)
+
+    # nothing in cutted line list
+    if not result:
+        logger.info("Error in cuting ring (might be just points). Nothing returns.")
+        return None
     
-    if len(result) == 1:
-        logger.info("No cut needed, keep original ring")
-        return Polygon(ring)
+    # line -> polygon
+    make_poly_list = []
+    for line in result:
+        poly = making_closure_polygon(line)
+        if poly is False:
+            continue
+        if not poly.is_valid:
+            continue
+        make_poly_list.append(poly)
+    logger.info("Number of generated poly through cutted lines %s:", len(make_poly_list))
+
+    ## check topology relations
+    #plot_polygons(make_poly_list)
+    if len(make_poly_list) > 1:
+        parent, depth = find_direct_parents(make_poly_list)
+        if any(parent):
+            print (f"parent is: {parent}, depth is {depth}")
+            result = rebuild_with_holes(make_poly_list, parent, depth)
+            logger.info("Return fixed multiPolygon")
+            return MultiPolygon(list(result))
+
+    if len(make_poly_list) == 1:
+        logger.info("Return fixed Polygon")
+        return Polygon(make_poly_list)
     
-    if len(result) == 2:
-        logger.info("remake polygon based on two linearline")
-        result_1 = result[0]
-        result_2 = result[1]
-        poly_1 = None
-        poly_2 = None
-        if isinstance(result_1, LineString):
-            poly_1 = making_closure_polygon(result_1)
-        else:
-            poly_1 = None
-        if isinstance(result_2, LineString):
-            poly_2 = making_closure_polygon(result_2)
-        else:
-            poly_2 = None
-        poly_list = [poly_1, poly_2]
-        plot_polygons(poly_list)
-
-        if poly_1 is None and poly_2 is None:
-            logger.error("Failed to make closure polygon")
-            return False
-        elif poly_1 is not None and poly_2 is not None:
-            mp = MultiPolygon([poly_1, poly_2])
-            return mp
-        elif poly_1 is None and poly_2 is not None:
-            return Polygon(poly_1)
-        elif poly_1 is not None and poly_2 is None:
-            return Polygon(poly_2)
-
-    if len(result) == 3:
-        logger.info("remake polygon based on three linearline")
-        line_1 = result[0]
-        line_2 = result[1]
-        line_3 = result[2]
-        poly_1 = making_closure_polygon(line_1)
-        poly_2 = making_closure_polygon(line_2)
-        poly_3 = making_closure_polygon(line_3)
-        if poly_1 is False or poly_2 is False or poly_3 is False:
-            logger.error("Failed to make closure polygon")
-            return False
-
-        ## check topology relations
-        poly_list = [poly_1, poly_2, poly_3]
-        plot_polygons(poly_list)
-        parent, depth = find_direct_parents(poly_list)
-        print (f"parent is: {parent}, depth is {depth}")
-        result = rebuild_with_holes(poly_list, parent, depth)
-        
-        mp = MultiPolygon(list(result))
-        return mp
-
-    logger.error("Unexpected cut result length: %s", len(result))
-    return False
+    return None
 
 
 def plot_polygons(polygons):

@@ -165,6 +165,6 @@ async function loadCenterPoint() {
 buildCRS();
 createSpilhaus();
 addSpilhausTiles();
-loadJSONdata1();
+//loadJSONdata1();
 loadJSONdata2();
 //loadCenterPoint();
