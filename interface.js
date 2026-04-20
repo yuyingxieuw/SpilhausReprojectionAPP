@@ -90,7 +90,7 @@ async function loadJSONdataPoly() {
 
   try {
     const urls = [
-      "Fixed_world.geojson",
+      "data/Fixed_world.geojson",
       // "Fixed_us.geojson",
       // "Fixed_china.geojson",
       // "Fixed_russia.geojson",
