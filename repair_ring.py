@@ -4,10 +4,10 @@ Script to repair ring
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import LineString, MultiPolygon, Polygon
+from shapely.geometry import LineString, MultiPolygon
 from shapely import get_coordinates
-from two_line_corner_closure_v3 import making_closure_polygon
-from polyTopology_v2 import find_direct_parents, rebuild_with_holes
+from two_line_corner_closure import making_closure_polygon
+from topology_for_polys import find_direct_parents, rebuild_with_holes
 
 
 # pylint: disable=C0301, C0303, W0632, R0914, R0911
@@ -113,10 +113,11 @@ def remake_polygon_for_ring(ring, inter_number):
         if not poly.is_valid:
             continue
         make_poly_list.append(poly)
-    logger.info("Number of generated poly through cutted lines %s:", len(make_poly_list))
+    logger.info("Number of poly generated through cutted lines %s:", len(make_poly_list))
 
     ## check topology relations
     #plot_polygons(make_poly_list)
+    print(len(make_poly_list))
     if len(make_poly_list) > 1:
         parent, depth = find_direct_parents(make_poly_list)
         if any(parent):
@@ -124,10 +125,12 @@ def remake_polygon_for_ring(ring, inter_number):
             result = rebuild_with_holes(make_poly_list, parent, depth)
             logger.info("Return fixed multiPolygon")
             return MultiPolygon(list(result))
-
+        return MultiPolygon(list(make_poly_list))
+    
     if len(make_poly_list) == 1:
         logger.info("Return fixed Polygon")
-        return Polygon(make_poly_list)
+        print(make_poly_list)
+        return make_poly_list[0]
     
     return None
 

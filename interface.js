@@ -80,8 +80,7 @@ function addSpilhausTiles() {
   }).addTo(mapSpilhaus);
 }
 
-async function loadJSONdata1() {
-  ///add polygon here
+async function loadJSONdataPoly() {
   const style = {
     color: "#e4e5e7ff",
     weight: 1,
@@ -90,49 +89,40 @@ async function loadJSONdata1() {
   };
 
   try {
-    const r = await fetch(
-      // 永远只能是相对路径
-      "tile_data/country_54099_China.geojson",
+    const urls = [
+      "Fixed_world.geojson",
+      // "Fixed_us.geojson",
+      // "Fixed_china.geojson",
+      // "Fixed_russia.geojson",
+      // "Fixed_chile.geojson",
+      // "Fixed_argentina.geojson",
+      // "Fixed_peru.geojson",
+      // "Fixed_ecuador.geojson",
+      // "Fixed_costarica.geojson",
+    ];
+
+    const responses = await Promise.all(urls.map((url) => fetch(url)));
+
+    const geojsonList = await Promise.all(
+      responses.map((r) => {
+        if (!r.ok) {
+          throw new Error(`Fetch failed: ${r.url} ${r.status}`);
+        }
+        return r.json();
+      }),
     );
-    const geojson = await r.json();
 
-    L.geoJSON(geojson, {
-      coordsToLatLng: (c) => L.latLng(c[1], c[0]),
-      style,
-      interactive: true,
-    }).addTo(mapSpilhaus);
+    geojsonList.forEach((geojson) => {
+      L.geoJSON(geojson, {
+        coordsToLatLng: (c) => L.latLng(c[1], c[0]),
+        style,
+        interactive: true,
+      }).addTo(mapSpilhaus);
+    });
 
-    console.log("Data loaded");
+    console.log("All data loaded");
   } catch (err) {
-    console.error("Data Loaded Failed", err);
-  }
-}
-
-async function loadJSONdata2() {
-  ///add polygon here
-  const style = {
-    color: "#e4e5e7ff",
-    weight: 1,
-    fillColor: "#d3340cff",
-    fillOpacity: 0.25,
-  };
-
-  try {
-    const r = await fetch(
-      // 永远只能是相对路径
-      "Fixed.geojson",
-    );
-    const geojson = await r.json();
-
-    L.geoJSON(geojson, {
-      coordsToLatLng: (c) => L.latLng(c[1], c[0]),
-      style,
-      interactive: true,
-    }).addTo(mapSpilhaus);
-
-    console.log("Data loaded");
-  } catch (err) {
-    console.error("Data Loaded Failed", err);
+    console.error("Data load failed", err);
   }
 }
 
@@ -165,6 +155,6 @@ async function loadCenterPoint() {
 buildCRS();
 createSpilhaus();
 addSpilhausTiles();
-//loadJSONdata1();
-loadJSONdata2();
+loadJSONdataPoly();
+
 //loadCenterPoint();

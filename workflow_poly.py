@@ -4,12 +4,12 @@ Script to manage workflow process polygon repair
 import logging
 import geopandas as gpd
 from pyproj import CRS, Transformer
-from shapely.geometry import Polygon, LinearRing, MultiPolygon
+from shapely.geometry import Polygon, LinearRing, MultiPolygon, LineString
 from shapely.ops import transform, unary_union
 from logging_config import setup_logger
 from repair_ring import remake_polygon_for_ring
 
-# pylint: disable=C0301, C0303, W0632, R0914, R0911, W0718
+# pylint: disable=C0301, C0303, W0632, R0914, R0911, R0912, R0915, W0718, W0108
 setup_logger()
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def get_inital_polygon(in_path):
             logger.error("List has invalid geom.")
             return False
         
-    #check CRS
+    #double check CRS
     if gdf.crs is None:
         gdf = gdf.set_crs("EPSG:4326")
     if gdf.crs.to_epsg() != 4326:
@@ -61,10 +61,15 @@ def label_inter_number(gdf_exploded):
     2. add column exterior_inter to store exterior inter number
     3. add column interior_inter: [] or [0,1,2,3]
     """
+    # the bound has redefine the wrap boundary to [0, 360]
+    # so poly across lon 0 remain unchanged incase it acrosses the whole map
     bound_4326 = gpd.read_file("data/bound_merge_4326.geojson")
     bound = bound_4326.geometry.iloc[0]
+    meridian_0 = LineString([(0, -90),(0, 90)])
     def to_360(ring):
         # turn 
+        if ring.intersects(meridian_0) is True:
+            return ring
         new_coords = []
         coords = list(ring.coords)
         for lon, lat in coords:
@@ -84,6 +89,12 @@ def label_inter_number(gdf_exploded):
             return 1
         
         if intersection_geom.geom_type == "MultiPoint":
+            return len(intersection_geom.geoms)
+        
+        if intersection_geom.geom_type in ("LineString", "MultiLineString"):
+            return 0
+        
+        if intersection_geom.geom_type == 'GeometryCollection':
             count = 0
             for g in intersection_geom.geoms:
                 if g.geom_type == "Point":
@@ -91,7 +102,7 @@ def label_inter_number(gdf_exploded):
                 elif g.geom_type == "MultiPoint":
                     count += len(g.geoms)
             return count
-        
+
         return 0
     
     gdf_exploded['exterior_inter'] = gdf_exploded["exterior_360"].apply(count_intersection_points)
@@ -124,25 +135,24 @@ def label_inter_number(gdf_exploded):
     gdf_inter = gdf_exploded.drop(drop_column, axis=1)
     
     def report(result):
+        print(result)
         has_interior = result.index[result['has_interior']]
-        has_interior_list = has_interior.tolist()
-        if has_interior_list:
-            interior_has_inter = result.loc[result['interior_inter']>0, ['interior_inter']]
-        else:
-            interior_has_inter = None
+        has_interior_list = has_interior.tolist() # e.g.[0,0,5,45....]
+        print ("---------index(level-0) of polygon has interior----------")
+        print(has_interior_list)
 
-        exterior_has_inter = result.loc[result['exterior_inter']>0, ['exterior_inter']]
+        exterior_has_inter = result.index[result['exterior_inter']>0].tolist()
+        print("-----------Exterior has intersection with boundary: Index(level-0) ----------")
+        print(exterior_has_inter)
+
+        interior_has_inter = result.index[result['interior_inter'].apply(lambda x: bool(x))].tolist()
+        print("-----------Interior has intersection with boundary: Index(level-0) ----------")
+        print(interior_has_inter)
+        
         # exterior_has_inter_df = result[result['exterior_inter']>0]
         # exterior_has_inter_df=exterior_has_inter_df.drop(columns=['exterior'])
         # exterior_has_inter_df.to_file("ExteriorInter.geojson", driver = "GeoJSON")
-
-        print ("---------ndex list of polygon has interior----------")
-        print(has_interior_list)
-        print("-----------Exterior has intersection with boundary: Index and Number----------")
-        print(exterior_has_inter)
-        print("-----------Interior has intersection with boundary: Index and Number----------")
-        print(interior_has_inter)
-
+        
     report(gdf_inter)
 
     return gdf_inter 
@@ -180,27 +190,71 @@ def repair_geodataframe(gdf):
     2. run repair script (take Ring get MultiPolygon or Polygon)
     3. return valid repaired geodataframe
     """
-    # deal with exterior
-    exterior_repaired = []
-    for _, row in gdf.iterrows():
-        inter_number = row["exterior_inter"]
-        exterior_ring = row["exterior_54099"]
-        if inter_number == 0:
-            exterior_repaired.append(Polygon(exterior_ring))
-            continue
+    
+    geom_repaired = []
+    repaired_exterior = 0
+    repaired_interior = 0
 
-        #inter_number ！= 0
-        fixed_exterior = remake_polygon_for_ring(exterior_ring, inter_number)
-        if fixed_exterior is None:
-            logger.error("Recheck exterior ring; Failed to cut. Put None")
-        exterior_repaired.append(fixed_exterior)
-                      
+    for _, row in gdf.iterrows():
+        # deal with exterior
+        final_exterior = None
+        ex_inter_number = row["exterior_inter"]
+        exterior_ring = row["exterior_54099"]
+        if ex_inter_number == 0:
+            final_exterior = Polygon(exterior_ring)
+
+        elif ex_inter_number != 0:
+            # _, ax = plt.subplots()
+            # x,y = exterior_ring.xy
+            # ax.plot(x,y)
+            # plt.show()
+            fixed_exterior = remake_polygon_for_ring(exterior_ring, ex_inter_number)
+            if fixed_exterior:
+                logger.info("Repaired one exterior")
+                repaired_exterior +=1
+            else:
+                logger.error("Recheck exterior ring; Failed to cut. Put None")
+            final_exterior = fixed_exterior
+
+        # deal with interior
+        has_interior = row["has_interior"]
+        if has_interior is False:
+            geom_repaired.append(final_exterior)
+
+        elif has_interior is True:
+            fixed_hole_list = []
+            interior_ring_list = row["interior_54099"]
+            in_inter_number_list = row["interior_inter"]
+            for i, interior_ring in enumerate(interior_ring_list):
+                in_inter_number = in_inter_number_list [i]
+                if in_inter_number !=0:
+                    fixed_hole = remake_polygon_for_ring(interior_ring, in_inter_number)
+                    if fixed_hole:
+                        repaired_interior += 0
+                    fixed_hole_list.append(Polygon(fixed_hole))
+                elif in_inter_number == 0:
+                    fixed_hole_list.append(interior_ring)
+
+            holes_union = unary_union(fixed_hole_list)
+            
+            if final_exterior is not None:
+                geom_repaired.append(final_exterior.difference(holes_union))
+            else:
+                geom_repaired.append(None)
+                     
     gdf = gdf.copy()
-    gdf["repaired_geom"] = exterior_repaired
+    gdf["repaired_geom"] = geom_repaired
+
+    # clean data
     column_drop = ['geometry','has_interior','exterior_inter', 'interior_inter', 'exterior_54099', 'interior_54099', 'exterior', 'interior']
-    gdf_processed = gdf.drop(column_drop, axis=1)
+    gdf_processed = gdf.drop(column_drop, axis=1, errors="ignore")
     gdf_processed = gdf_processed.set_geometry('repaired_geom')
-    print(gdf_processed)
+
+    #print report
+    print ("-----------Repaired Exterior----------")
+    print (repaired_exterior)
+    print ("-----------Repaired Interior----------")
+    print (repaired_interior)
     return gdf_processed
 
 def regroup_to_multipolygon(gdf_processed):
@@ -237,7 +291,7 @@ def run_program():
     """
     main workflow
     """
-    in_path = "data/China4326.geojson"
+    in_path = "data/world4326.geojson"
     gdf = get_inital_polygon(in_path)
 
     if gdf is False:
@@ -256,12 +310,12 @@ def run_program():
 
     # check if need repair
     gdf_processed = repair_geodataframe(gdf_inter_label)
-    print(gdf_processed.columns.to_list())
+    # print(gdf_processed.columns.to_list())
 
     result = regroup_to_multipolygon(gdf_processed)
-    print(result)
+    # print(result)
     # export result
-    result.to_file("Fixed.geojson", driver = "GeoJSON")
+    result.to_file("Fixed_world.geojson", driver = "GeoJSON")
     logger.info("Data Transform Finished")
     return True
     
