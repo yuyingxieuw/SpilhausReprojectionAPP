@@ -2,6 +2,7 @@
 let metersProjection = null;
 let CRS_Spilhaus = null;
 let mapSpilhaus = null;
+let uploadedGeojsonLayer = null;
 
 const minx = -16857702.71589949;
 const miny = -17212325.962645144;
@@ -80,6 +81,145 @@ function addSpilhausTiles() {
   }).addTo(mapSpilhaus);
 }
 
+function setRepairStatus(message, type = "neutral") {
+  const status = document.getElementById("repairStatus");
+  if (!status) return;
+
+  status.textContent = message;
+  status.dataset.type = type;
+}
+
+function assertGeoJSONShape(geojson) {
+  const validTypes = new Set([
+    "FeatureCollection",
+    "Feature",
+    "GeometryCollection",
+    "Point",
+    "MultiPoint",
+    "LineString",
+    "MultiLineString",
+    "Polygon",
+    "MultiPolygon",
+  ]);
+
+  if (!geojson || typeof geojson !== "object") {
+    throw new Error("请输入有效的 GeoJSON 对象。");
+  }
+
+  if (!validTypes.has(geojson.type)) {
+    throw new Error("GeoJSON 缺少有效的 type。");
+  }
+
+  if (
+    geojson.type === "FeatureCollection" &&
+    !Array.isArray(geojson.features)
+  ) {
+    throw new Error("FeatureCollection 需要包含 features 数组。");
+  }
+
+  if (geojson.type === "Feature" && !geojson.geometry) {
+    throw new Error("Feature 需要包含 geometry。");
+  }
+}
+
+function countGeoJSONFeatures(geojson) {
+  if (geojson.type === "FeatureCollection") return geojson.features.length;
+  if (geojson.type === "Feature") return 1;
+  return 1;
+}
+
+function addUploadedGeoJSON(geojson) {
+  if (uploadedGeojsonLayer) {
+    mapSpilhaus.removeLayer(uploadedGeojsonLayer);
+  }
+
+  uploadedGeojsonLayer = L.geoJSON(geojson, {
+    coordsToLatLng: (c) => L.latLng(c[1], c[0]),
+    pointToLayer: (_feature, latlng) =>
+      L.circleMarker(latlng, {
+        radius: 5,
+        fillColor: "#ffd166",
+        color: "#1b1b18",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.9,
+      }),
+    style: {
+      color: "#0f5132",
+      weight: 2,
+      fillColor: "#2a9d8f",
+      fillOpacity: 0.32,
+    },
+    interactive: true,
+  }).addTo(mapSpilhaus);
+
+  const bounds = uploadedGeojsonLayer.getBounds();
+  if (bounds.isValid()) {
+    mapSpilhaus.fitBounds(bounds.pad(0.12), {
+      animate: true,
+      maxZoom: 3,
+    });
+  }
+}
+
+async function readGeoJSONFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("文件读取失败。"));
+    reader.readAsText(file);
+  });
+}
+
+function setupRepairForm() {
+  const form = document.getElementById("repairForm");
+  const fileInput = document.getElementById("geojsonFile");
+  const textInput = document.getElementById("geojsonInput");
+  const repairButton = document.getElementById("repairButton");
+
+  if (!form || !fileInput || !textInput || !repairButton) return;
+
+  fileInput.addEventListener("change", async () => {
+    const [file] = fileInput.files;
+    if (!file) return;
+
+    try {
+      const text = await readGeoJSONFile(file);
+      textInput.value = text;
+      setRepairStatus(`Read file ${file.name}。`);
+    } catch (err) {
+      setRepairStatus(err.message, "error");
+    }
+  });
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    repairButton.disabled = true;
+    setRepairStatus("Repairing...");
+
+    try {
+      const rawGeoJSON = textInput.value.trim();
+      if (!rawGeoJSON) {
+        throw new Error("Please upload or paste GeoJSON。");
+      }
+
+      const geojson = JSON.parse(rawGeoJSON);
+      assertGeoJSONShape(geojson);
+      addUploadedGeoJSON(geojson);
+
+      const featureCount = countGeoJSONFeatures(geojson);
+      setRepairStatus(
+        `Repair finished, added ${featureCount} feature to the map。`,
+        "success",
+      );
+    } catch (err) {
+      setRepairStatus(err.message, "error");
+    } finally {
+      repairButton.disabled = false;
+    }
+  });
+}
+
 async function loadJSONdataPoly() {
   const style = {
     color: "#e4e5e7ff",
@@ -155,6 +295,7 @@ async function loadCenterPoint() {
 buildCRS();
 createSpilhaus();
 addSpilhausTiles();
-loadJSONdataPoly();
+// loadJSONdataPoly();
+setupRepairForm();
 
 //loadCenterPoint();

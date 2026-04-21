@@ -24,15 +24,44 @@
     <!-- <script defer src="script/script-proj.js"></script> -->
     <script defer src="interface.js"></script>
 
-    <title>Spilhaus Projection Widget</title>
+    <title>Repair Spilhaus GeoJSON</title>
   </head>
   <body>
-
-    <!-- map part -->
-    <div class = "map-container">
+    <main class="app-shell">
+      <section class="map-panel" aria-label="Spilhaus tile preview">
         <div id="mapSpilhaus"></div>
-        <div id="mapWgs"></div>
-    </div>
+      </section>
+
+      <aside class="repair-panel" aria-labelledby="appTitle">
+        <div class="panel-header">
+          <p class="eyebrow">Spilhaus Reprojection</p>
+          <h1 id="appTitle">Repair Spilhaus GeoJSON</h1>
+          <p>This project addresses the stray-line issue caused by geometry reprojection.</p>
+          <a href="https://github.com/yuyingxieuw/SpilhausReprojectionAPP" target="_blank" rel="noopener noreferrer">
+            View on GitHub
+          </a>
+        </div>
+
+        <form id="repairForm" class="repair-form">
+          <label class="field">
+            <span>Upload GeoJSON</span>
+            <input id="geojsonFile" type="file" accept=".geojson,.json,application/geo+json,application/json" />
+          </label>
+
+          <label class="field">
+            <span>Paste GeoJSON</span>
+            <textarea
+              id="geojsonInput"
+              spellcheck="false"
+              placeholder='{"type":"FeatureCollection","features":[]}'
+            ></textarea>
+          </label>
+
+          <button id="repairButton" type="submit">Repair</button>
+          <p id="repairStatus" class="status" role="status" aria-live="polite"></p>
+        </form>
+      </aside>
+    </main>
 
   </body>
 </html>
