@@ -6,8 +6,8 @@ import geopandas as gpd
 from pyproj import CRS, Transformer
 from shapely.geometry import Polygon, LinearRing, MultiPolygon, LineString
 from shapely.ops import transform, unary_union
-from logging_config import setup_logger
-from repair_ring import remake_polygon_for_ring
+from scripts.logging_config import setup_logger
+from scripts.repair_ring import remake_polygon_for_ring
 
 # pylint: disable=C0301, C0303, W0632, R0914, R0911, R0912, R0915, W0718, W0108
 setup_logger()

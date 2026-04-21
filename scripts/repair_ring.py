@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString, MultiPolygon
 from shapely import get_coordinates
-from two_line_corner_closure import making_closure_polygon
-from topology_for_polys import find_direct_parents, rebuild_with_holes
+from scripts.two_line_corner_closure import making_closure_polygon
+from scripts.topology_for_polys import find_direct_parents, rebuild_with_holes
 
 
 # pylint: disable=C0301, C0303, W0632, R0914, R0911
