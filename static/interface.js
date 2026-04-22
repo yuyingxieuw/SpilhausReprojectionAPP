@@ -102,6 +102,7 @@ function assertGeoJSONShape(geojson) {
     "MultiPolygon",
   ]);
 
+  // check if it is string
   if (!geojson || typeof geojson !== "object") {
     throw new Error("Please upload valid GeoJSON file.");
   }
@@ -128,40 +129,6 @@ function countGeoJSONFeatures(geojson) {
   return 1;
 }
 
-function addUploadedGeoJSON(geojson) {
-  if (uploadedGeojsonLayer) {
-    mapSpilhaus.removeLayer(uploadedGeojsonLayer);
-  }
-
-  uploadedGeojsonLayer = L.geoJSON(geojson, {
-    coordsToLatLng: (c) => L.latLng(c[1], c[0]),
-    pointToLayer: (_feature, latlng) =>
-      L.circleMarker(latlng, {
-        radius: 5,
-        fillColor: "#ffd166",
-        color: "#1b1b18",
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 0.9,
-      }),
-    style: {
-      color: "#0f5132",
-      weight: 2,
-      fillColor: "#2a9d8f",
-      fillOpacity: 0.32,
-    },
-    interactive: true,
-  }).addTo(mapSpilhaus);
-
-  const bounds = uploadedGeojsonLayer.getBounds();
-  if (bounds.isValid()) {
-    mapSpilhaus.fitBounds(bounds.pad(0.12), {
-      animate: true,
-      maxZoom: 3,
-    });
-  }
-}
-
 async function readGeoJSONFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -176,8 +143,10 @@ function setupSubmitForm() {
   const fileInput = document.getElementById("geojsonFile");
   const textInput = document.getElementById("geojsonInput");
   const submitButton = document.getElementById("submitButton");
+  const cleanButton = document.getElementById("cleanButton");
 
-  if (!form || !fileInput || !textInput || !submitButton) return;
+  if (!form || !fileInput || !textInput || !submitButton || !cleanButton)
+    return;
 
   fileInput.addEventListener("change", async () => {
     const [file] = fileInput.files;
@@ -208,7 +177,11 @@ function setupSubmitForm() {
       assertGeoJSONShape(geojson);
       const responseData = await sendToServer(geojson);
       processed_result = responseData.result;
-      loadGeoJSONToLeaflet(processed_result);
+      if (uploadedGeojsonLayer) {
+        mapSpilhaus.removeLayer(uploadedGeojsonLayer);
+        uploadedGeojsonLayer = null;
+      }
+      uploadedGeojsonLayer = loadGeoJSONToLeaflet(processed_result);
       const featureCount = countGeoJSONFeatures(processed_result);
       setSubmitStatus(
         `Upload finished, added ${featureCount} feature to the map。`,
@@ -219,6 +192,17 @@ function setupSubmitForm() {
     } finally {
       submitButton.disabled = false;
     }
+  });
+
+  cleanButton.addEventListener("click", () => {
+    form.reset();
+
+    if (uploadedGeojsonLayer) {
+      mapSpilhaus.removeLayer(uploadedGeojsonLayer);
+      uploadedGeojsonLayer = null;
+    }
+
+    setSubmitStatus("");
   });
 }
 
@@ -247,7 +231,7 @@ function loadGeoJSONToLeaflet(data, options = {}) {
     throw new Error("No geojson data provided");
   }
 
-  // 把各种 GeoJSON 顶层类型统一整理成 Leaflet 更稳妥可吃的格式
+  // set all geojson file with feature and feature collection mode
   function normalizeGeoJSON(input) {
     if (typeof input === "string") {
       input = JSON.parse(input);
@@ -272,17 +256,17 @@ function loadGeoJSONToLeaflet(data, options = {}) {
       throw new Error(`Unsupported GeoJSON type: ${input.type}`);
     }
 
-    // 1) 已经是 FeatureCollection，直接返回
+    // 1) FeatureCollection -> reatrun
     if (input.type === "FeatureCollection") {
       return input;
     }
 
-    // 2) 已经是 Feature，直接返回
+    // 2) Feature -> return
     if (input.type === "Feature") {
       return input;
     }
 
-    // 3) GeometryCollection 需要包成 Feature
+    // 3) GeometryCollection -> Feature
     if (input.type === "GeometryCollection") {
       return {
         type: "Feature",
@@ -291,7 +275,7 @@ function loadGeoJSONToLeaflet(data, options = {}) {
       };
     }
 
-    // 4) 其他纯 geometry 类型（Point / Polygon / ...）也包成 Feature
+    // 4) geometry（Point / Polygon / ...）-> Feature
     return {
       type: "Feature",
       properties: {},
@@ -314,7 +298,7 @@ function loadGeoJSONToLeaflet(data, options = {}) {
     // Line
     if (geomType === "LineString" || geomType === "MultiLineString") {
       return {
-        color: "#3388ff",
+        color: "#0f5132",
         weight: 3,
         opacity: 1,
       };
@@ -322,10 +306,10 @@ function loadGeoJSONToLeaflet(data, options = {}) {
     // Polygon
     if (geomType === "Polygon" || geomType === "MultiPolygon") {
       return {
-        color: "#3388ff", // 边线颜色
-        weight: 1,
-        fillColor: "#3388ff", // 填充颜色
-        fillOpacity: 0.3,
+        color: "#0f5132",
+        weight: 1.4,
+        fillColor: "#2a9d8f",
+        fillOpacity: 0.32,
       };
     }
     return {};

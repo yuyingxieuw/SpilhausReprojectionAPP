@@ -26,7 +26,7 @@ textarea {
   height: 100vh;
   height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) 500px;
   background: #f4f1e8;
 }
 
@@ -113,27 +113,49 @@ h1 {
 
 .field textarea:focus,
 .field input[type="file"]:focus-visible,
-#submitButton:focus-visible {
+#submitButton:focus-visible,
+#cleanButton:focus-visible {
   outline: 3px solid rgba(38, 115, 112, 0.28);
   outline-offset: 2px;
 }
 
-#submitButton {
-  min-height: 44px;
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin-top: 8px;
+}
+
+#submitButton,
+#cleanButton {
+  min-height: 44px;
   border: 0;
   border-radius: 8px;
-  background: #267370;
-  color: #ffffff;
   font-weight: 800;
   cursor: pointer;
+}
+
+#submitButton {
+  background: #267370;
+  color: #ffffff;
+}
+
+#cleanButton {
+  border: 1px solid rgba(27, 27, 24, 0.18);
+  background: #e9e7e7;
+  color: #393832;
 }
 
 #submitButton:hover {
   background: #1f5f5d;
 }
 
-#submitButton:disabled {
+#cleanButton:hover {
+  background: #dedbdb;
+}
+
+#submitButton:disabled,
+#cleanButton:disabled {
   cursor: wait;
   opacity: 0.68;
 }

@@ -36,8 +36,8 @@
         <div class="panel-header">
           <p class="eyebrow">Spilhaus Reprojection</p>
           <h1 id="appTitle">Spilhaus GeoJSON Reprojection</h1>
-          <p>This project take geojson file and transfer it to spilhaus projection. It automatically addresses the stray-line issue caused by reprojection.
-           For repair only, upload geojson in "urn:ogc:def:crs:ESRI::54099".
+          <p>This project takes a GeoJSON file and transforms it into the Spilhaus projection. It automatically fixes the stray-line issue caused by reprojection. 
+            For repair only, please upload a GeoJSON file in urn:ogc:def:crs:ESRI::54099
           </p>
           <a href="https://github.com/yuyingxieuw/SpilhausReprojectionAPP" target="_blank" rel="noopener noreferrer">
             View on GitHub
@@ -59,7 +59,10 @@
             ></textarea>
           </label>
 
-          <button id="submitButton" type="submit">Submit</button>
+          <div class="form-actions">
+            <button id="submitButton" type="submit">Submit</button>
+            <button id="cleanButton" type="button">Clean</button>
+          </div>
           <p id="submitStatus" class="status" role="status" aria-live="polite"></p>
         </form>
       </aside>
