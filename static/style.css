@@ -9,11 +9,11 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-family: "Manrope", Arial, sans-serif;
   background: #f4f1e8;
   color: #1b1b18;
-  overflow: hidden;
+  overflow: auto;
 }
 
 button,
@@ -44,20 +44,20 @@ textarea {
   display: block;
 }
 
-.repair-panel {
+.submit-panel {
   height: 100%;
   padding: 24px 30px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 16px;
-  background: #f8f6ef;
-  overflow: hidden;
+  gap: 20px;
+  background: #d1d1d0;
+  overflow: auto;
 }
 
 .panel-header {
   display: grid;
-  gap: 8px;
+  gap: 16px;
 }
 
 .eyebrow {
@@ -69,13 +69,13 @@ textarea {
 }
 
 h1 {
-  max-width: 12ch;
-  font-size: clamp(1.6rem, 3.2vw, 2.8rem);
-  line-height: 1.03;
-  font-weight: 800;
+  max-width: 15ch;
+  font-size: clamp(1rem, 2.2vw, 2rem);
+  line-height: 1;
+  font-weight: 500;
 }
 
-.repair-form {
+.submit-form {
   display: grid;
   gap: 12px;
 }
@@ -93,7 +93,7 @@ h1 {
   padding: 12px;
   border: 1px solid rgba(27, 27, 24, 0.18);
   border-radius: 8px;
-  background: #ffffff;
+  background: #e9e7e7;
   color: #393832;
 }
 
@@ -105,22 +105,22 @@ h1 {
   resize: vertical;
   border: 1px solid rgba(27, 27, 24, 0.18);
   border-radius: 8px;
-  padding: 14px;
-  background: #ffffff;
+  padding: 12px;
+  background: #e9e7e7;
   color: #1b1b18;
   line-height: 1.45;
 }
 
 .field textarea:focus,
 .field input[type="file"]:focus-visible,
-#repairButton:focus-visible {
+#submitButton:focus-visible {
   outline: 3px solid rgba(38, 115, 112, 0.28);
   outline-offset: 2px;
 }
 
-#repairButton {
+#submitButton {
   min-height: 44px;
-  margin-top: 14px;
+  margin-top: 8px;
   border: 0;
   border-radius: 8px;
   background: #267370;
@@ -129,11 +129,11 @@ h1 {
   cursor: pointer;
 }
 
-#repairButton:hover {
+#submitButton:hover {
   background: #1f5f5d;
 }
 
-#repairButton:disabled {
+#submitButton:disabled {
   cursor: wait;
   opacity: 0.68;
 }
@@ -211,7 +211,7 @@ h1 {
     border-bottom: 1px solid rgba(27, 27, 24, 0.12);
   }
 
-  .repair-panel {
+  .submit-panel {
     height: auto;
     padding: 28px 20px 36px;
     overflow: visible;
@@ -222,7 +222,7 @@ h1 {
   }
 
   .field textarea {
-    height: 200px;
+    height: 220px;
     max-height: none;
   }
 }

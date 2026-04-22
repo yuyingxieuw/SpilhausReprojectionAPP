@@ -62,7 +62,7 @@ function createSpilhaus() {
 }
 
 function addSpilhausTiles() {
-  let tile = L.tileLayer("tiles/{z}/{x}/{y}.png", {
+  let tile = L.tileLayer("/static/tiles/{z}/{x}/{y}.png", {
     tms: true,
     tileSize: 256,
     minZoom: 0,
@@ -81,8 +81,8 @@ function addSpilhausTiles() {
   }).addTo(mapSpilhaus);
 }
 
-function setRepairStatus(message, type = "neutral") {
-  const status = document.getElementById("repairStatus");
+function setSubmitStatus(message, type = "neutral") {
+  const status = document.getElementById("submitStatus");
   if (!status) return;
 
   status.textContent = message;
@@ -103,22 +103,22 @@ function assertGeoJSONShape(geojson) {
   ]);
 
   if (!geojson || typeof geojson !== "object") {
-    throw new Error("请输入有效的 GeoJSON 对象。");
+    throw new Error("Please upload valid GeoJSON file.");
   }
 
   if (!validTypes.has(geojson.type)) {
-    throw new Error("GeoJSON 缺少有效的 type。");
+    throw new Error("GeoJSON lacks valid type.");
   }
 
   if (
     geojson.type === "FeatureCollection" &&
     !Array.isArray(geojson.features)
   ) {
-    throw new Error("FeatureCollection 需要包含 features 数组。");
+    throw new Error("FeatureCollection needs features.");
   }
 
   if (geojson.type === "Feature" && !geojson.geometry) {
-    throw new Error("Feature 需要包含 geometry。");
+    throw new Error("Feature needs geometry.");
   }
 }
 
@@ -166,18 +166,18 @@ async function readGeoJSONFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("文件读取失败。"));
+    reader.onerror = () => reject(new Error("Fail to read the file."));
     reader.readAsText(file);
   });
 }
 
-function setupRepairForm() {
-  const form = document.getElementById("repairForm");
+function setupSubmitForm() {
+  const form = document.getElementById("submitForm");
   const fileInput = document.getElementById("geojsonFile");
   const textInput = document.getElementById("geojsonInput");
-  const repairButton = document.getElementById("repairButton");
+  const submitButton = document.getElementById("submitButton");
 
-  if (!form || !fileInput || !textInput || !repairButton) return;
+  if (!form || !fileInput || !textInput || !submitButton) return;
 
   fileInput.addEventListener("change", async () => {
     const [file] = fileInput.files;
@@ -186,116 +186,176 @@ function setupRepairForm() {
     try {
       const text = await readGeoJSONFile(file);
       textInput.value = text;
-      setRepairStatus(`Read file ${file.name}。`);
+      setSubmitStatus(`Read file ${file.name}.`);
     } catch (err) {
-      setRepairStatus(err.message, "error");
+      setSubmitStatus(`Error in read geojsonfile: ${err}`);
     }
   });
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    repairButton.disabled = true;
-    setRepairStatus("Repairing...");
+    submitButton.disabled = true;
+    setSubmitStatus("Submiting...");
 
     try {
       const rawGeoJSON = textInput.value.trim();
+
       if (!rawGeoJSON) {
         throw new Error("Please upload or paste GeoJSON。");
       }
 
       const geojson = JSON.parse(rawGeoJSON);
       assertGeoJSONShape(geojson);
-      addUploadedGeoJSON(geojson);
-
-      const featureCount = countGeoJSONFeatures(geojson);
-      setRepairStatus(
-        `Repair finished, added ${featureCount} feature to the map。`,
+      const responseData = await sendToServer(geojson);
+      processed_result = responseData.result;
+      loadGeoJSONToLeaflet(processed_result);
+      const featureCount = countGeoJSONFeatures(processed_result);
+      setSubmitStatus(
+        `Upload finished, added ${featureCount} feature to the map。`,
         "success",
       );
     } catch (err) {
-      setRepairStatus(err.message, "error");
+      setSubmitStatus(`Error in process geojson: ${err}`);
     } finally {
-      repairButton.disabled = false;
+      submitButton.disabled = false;
     }
   });
 }
 
-async function loadJSONdataPoly() {
-  const style = {
-    color: "#e4e5e7ff",
-    weight: 1,
-    fillColor: "#d3340cff",
-    fillOpacity: 0.25,
-  };
-
-  try {
-    const urls = [
-      "data/Fixed_world.geojson",
-      // "Fixed_us.geojson",
-      // "Fixed_china.geojson",
-      // "Fixed_russia.geojson",
-      // "Fixed_chile.geojson",
-      // "Fixed_argentina.geojson",
-      // "Fixed_peru.geojson",
-      // "Fixed_ecuador.geojson",
-      // "Fixed_costarica.geojson",
-    ];
-
-    const responses = await Promise.all(urls.map((url) => fetch(url)));
-
-    const geojsonList = await Promise.all(
-      responses.map((r) => {
-        if (!r.ok) {
-          throw new Error(`Fetch failed: ${r.url} ${r.status}`);
-        }
-        return r.json();
-      }),
-    );
-
-    geojsonList.forEach((geojson) => {
-      L.geoJSON(geojson, {
-        coordsToLatLng: (c) => L.latLng(c[1], c[0]),
-        style,
-        interactive: true,
-      }).addTo(mapSpilhaus);
-    });
-
-    console.log("All data loaded");
-  } catch (err) {
-    console.error("Data load failed", err);
-  }
+async function sendToServer(geojson) {
+  const response = await fetch("/api/process", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(geojson),
+  });
+  const responseJson = await response.json();
+  return responseJson;
 }
 
-async function loadCenterPoint() {
-  // for points
-  const pointstyle = {
-    radius: 6,
-    fillColor: "#392926ff",
-    color: "#ffffff",
-    weight: 0.4,
-    opacity: 1,
-    fillOpacity: 1,
+function loadGeoJSONToLeaflet(data, options = {}) {
+  const {
+    pointToLayer,
+    style,
+    onEachFeature,
+    coordsToLatLng,
+    markersInheritOptions = false,
+  } = options;
+
+  if (!data) {
+    throw new Error("No geojson data provided");
+  }
+
+  // 把各种 GeoJSON 顶层类型统一整理成 Leaflet 更稳妥可吃的格式
+  function normalizeGeoJSON(input) {
+    if (typeof input === "string") {
+      input = JSON.parse(input);
+    }
+    if (!input || typeof input !== "object") {
+      throw new Error("Invalid GeoJSON: input must be an object");
+    }
+
+    const allowedTypes = new Set([
+      "FeatureCollection",
+      "Feature",
+      "GeometryCollection",
+      "Point",
+      "MultiPoint",
+      "LineString",
+      "MultiLineString",
+      "Polygon",
+      "MultiPolygon",
+    ]);
+
+    if (!allowedTypes.has(input.type)) {
+      throw new Error(`Unsupported GeoJSON type: ${input.type}`);
+    }
+
+    // 1) 已经是 FeatureCollection，直接返回
+    if (input.type === "FeatureCollection") {
+      return input;
+    }
+
+    // 2) 已经是 Feature，直接返回
+    if (input.type === "Feature") {
+      return input;
+    }
+
+    // 3) GeometryCollection 需要包成 Feature
+    if (input.type === "GeometryCollection") {
+      return {
+        type: "Feature",
+        properties: {},
+        geometry: input,
+      };
+    }
+
+    // 4) 其他纯 geometry 类型（Point / Polygon / ...）也包成 Feature
+    return {
+      type: "Feature",
+      properties: {},
+      geometry: input,
+    };
+  }
+
+  const normalized = normalizeGeoJSON(data);
+
+  const defaultPointToLayer = (feature, latlng) => {
+    return L.circleMarker(latlng, {
+      radius: 6,
+      weight: 1,
+      fillOpacity: 0.8,
+    });
   };
 
-  try {
-    const r = await fetch("data/center.geojson");
-    const geojson = await r.json();
+  const defaultStyle = (feature) => {
+    const geomType = feature?.geometry?.type;
+    // Line
+    if (geomType === "LineString" || geomType === "MultiLineString") {
+      return {
+        color: "#3388ff",
+        weight: 3,
+        opacity: 1,
+      };
+    }
+    // Polygon
+    if (geomType === "Polygon" || geomType === "MultiPolygon") {
+      return {
+        color: "#3388ff", // 边线颜色
+        weight: 1,
+        fillColor: "#3388ff", // 填充颜色
+        fillOpacity: 0.3,
+      };
+    }
+    return {};
+  };
 
-    L.geoJSON(geojson, {
-      pointToLayer: (feature, latlng) => {
-        return L.circleMarker(latlng, pointstyle);
-      },
-    }).addTo(mapSpilhaus);
-    console.log("center point data loaded");
-  } catch (err) {
-    console.error("Center Data loaded failed", err);
-  }
+  const defaultOnEachFeature = (feature, layer) => {
+    if (feature.properties && Object.keys(feature.properties).length > 0) {
+      layer.bindPopup(
+        `<pre>${JSON.stringify(feature.properties, null, 2)}</pre>`,
+      );
+    }
+  };
+
+  const geojsonLayer = L.geoJSON(normalized, {
+    pointToLayer: pointToLayer || defaultPointToLayer,
+    style: style || defaultStyle,
+    onEachFeature: onEachFeature || defaultOnEachFeature,
+    coordsToLatLng,
+    markersInheritOptions,
+  });
+
+  geojsonLayer.addTo(mapSpilhaus);
+
+  return geojsonLayer;
 }
 
 buildCRS();
 createSpilhaus();
 addSpilhausTiles();
 // loadJSONdataPoly();
-setupRepairForm();
+setupSubmitForm();
 
 //loadCenterPoint();

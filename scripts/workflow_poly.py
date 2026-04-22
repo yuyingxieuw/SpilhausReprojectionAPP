@@ -13,7 +13,7 @@ from scripts.repair_ring import remake_polygon_for_ring
 setup_logger()
 logger = logging.getLogger(__name__)
 
-def get_inital_polygon(in_path):
+def get_inital_polygon(data):
     """
     1. turn geojson data to geopands file
     2. check validation of each feature
@@ -21,8 +21,14 @@ def get_inital_polygon(in_path):
     4. double check crs; if not 4326 make it 4326
     """
     logger.debug("Parsing origional file../")
-    gdf = gpd.read_file(in_path)
-    
+    #gdf = gpd.read_file(in_path)
+    if data["type"] == "FeatureCollection":
+        gdf = gpd.GeoDataFrame.from_features(data["features"])
+    elif data["type"] == "Feature":
+        gdf = gpd.GeoDataFrame.from_features([data])
+    else:
+        raise ValueError("Input must be a GeoJSON Feature or FeatureCollection")
+
     #check validataion
     for geom in gdf.geometry:
         if not geom.is_valid:
@@ -287,12 +293,12 @@ def regroup_to_multipolygon(gdf_processed):
     gdf_final = gpd.GeoDataFrame(attrs, geometry=geom, crs = "ESRI:54099")
     return gdf_final
 
-def run_program():
+def run_program(geojson_data):
     """
     main workflow
     """
-    in_path = "data/world4326.geojson"
-    gdf = get_inital_polygon(in_path)
+    
+    gdf = get_inital_polygon(geojson_data)
 
     if gdf is False:
         logger.error ("Making dataframe fail, double check data validation")
@@ -315,10 +321,10 @@ def run_program():
     result = regroup_to_multipolygon(gdf_processed)
     # print(result)
     # export result
-    result.to_file("Fixed_world.geojson", driver = "GeoJSON")
+    # result.to_file("Fixed_world.geojson", driver = "GeoJSON")
     logger.info("Data Transform Finished")
-    return True
+    return result.to_json()
     
 
-if __name__ == "__main__":
-    run_program() 
+# if __name__ == "__main__":
+#     run_program(geojson_data) 

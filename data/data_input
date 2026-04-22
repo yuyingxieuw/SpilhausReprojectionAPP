@@ -1,0 +1,1 @@
+{"type": "Feature", "properties": {"name": "small polygon"}, "geometry": {"type": "Polygon", "coordinates": [[[-122.35, 47.6], [-122.35, 47.61], [-122.34, 47.61], [-122.34, 47.6], [-122.35, 47.6]]]}}
