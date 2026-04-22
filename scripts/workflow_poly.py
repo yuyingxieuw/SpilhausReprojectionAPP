@@ -18,7 +18,7 @@ def get_inital_polygon(data):
     1. turn geojson data to geopands file
     2. check validation of each feature
     3. return false if there's any invalid geometry
-    4. double check crs; if not 4326 make it 4326
+    4. double check crs; if minnot 4326 make it 4326
     """
     logger.debug("Parsing origional file../")
     #gdf = gpd.read_file(in_path)
