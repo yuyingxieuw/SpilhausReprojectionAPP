@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def cut_ring_to_parts(ring, inter_number) ->list[tuple]:
     """
-    1. get cut polygon to lines based on sign/x/y change
+    1. get cut polygon to lines based on inter_number
     2. ring: valid LinearRing
     3. inter_number: how many part should be cut, int
     4. return: list of coords; length of the list should equal to the (inter_number +1)
@@ -32,17 +32,18 @@ def cut_ring_to_parts(ring, inter_number) ->list[tuple]:
 
     # find idx where the point has the biggest distance with next point a , b
     # p1 line[:]
-    logger.info("Cutting coords based on No%d of intersection point.", inter_number)
+    logger.info("Cutting ring coords based on No %d of intersection point.", inter_number)
     all_xy = list(coords)
     arr = np.array(all_xy)
     next_arr = np.roll(arr, -1, axis=0)
     diff = next_arr - arr
     dist = np.linalg.norm(diff, axis=1)
-    top_idx = np.argsort(dist)[-inter_number:][::-1]
+    inter_number_int = int(inter_number)
+    top_idx = np.argsort(dist)[-inter_number_int:][::-1]
     top_idx_sorted = np.sort(top_idx)
     logger.info ("max change index: %s", top_idx_sorted)
 
-    # result is separted ring -> a list of list of separated coords
+    # result is separted -> a list of list of separated coords
     result = []
     start = 0
     for idx in top_idx_sorted:
@@ -78,7 +79,7 @@ def ring_parts_to_linestring(ring_seprated):
         if len(part) == 1:
             continue
         if len(part) < 1:
-            logger.error("Cut Ring Error.")
+            logger.error("Cut Ring Error. Skipped")
             continue
         final_ring_sep.append(LineString(part))
 
