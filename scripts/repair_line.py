@@ -3,7 +3,7 @@ Script to repair linestring
 """
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from shapely.geometry import LineString, MultiLineString
 from shapely import get_coordinates
 
