@@ -364,28 +364,6 @@ def run_program(geojson_data):
         return False
     
     # check CRS
-    crs_54099 = CRS.from_proj4("+proj=spilhaus +lat_0=-49.56371678 +lon_0=66.94970198 +azi=40.17823482 +k_0=1.4142135623731 +rot=45 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs")
-    def is_spilhaus_54099(crs) -> bool:
-        if crs is None:
-            return False
-        try:
-            # 1. 直接比 ESRI authority code（处理 urn:ogc:def:crs:ESRI::54099 的情况）
-            auth = crs.to_authority()  # 返回 ('ESRI', '54099') 或 None
-            if auth and auth[0] == "ESRI" and auth[1] == "54099":
-                return True
-            # 2. 用 pyproj 的等价性判断（处理 proj4 等其他形式）
-            return crs.equals(crs_54099)
-        except Exception:
-            return False
-
-    # main logic
-    if is_spilhaus_54099(gdf.crs):
-        logger.info("Only repair data: CRS is ESRI:54099")
-        gdf_processed = repair_geodataframe(gdf_inter_label)
-        result = regroup(gdf_processed)
-        logger.info("Data Repair Finished")
-        return result
-
     # if not 54099 turn too 4326
     if gdf.crs is None:
         gdf = gdf.set_crs("EPSG:4326")
