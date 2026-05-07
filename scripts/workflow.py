@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 def normalize_inital_data(data):
     """
-    1. turn geojson data to geopands file
-    2. check validation of each feature
-    3. return false if there's any invalid geometry
-    4. double check crs; if minnot 4326 make it 4326
+    1. add feature collection header/wrapper for data if it doesn't have
+    2. turn geojson data to geopands file
+    3. check validation of each feature
+    4. return false if there's any invalid geometry
     5. return exploded dataframe
     """
     logger.debug("Parsing origional file../")
@@ -55,13 +55,6 @@ def normalize_inital_data(data):
         if not geom.is_valid:
             logger.error("List has invalid geom.")
             return False
-        
-    #double check CRS
-    if gdf.crs is None:
-        gdf = gdf.set_crs("EPSG:4326")
-    if gdf.crs.to_epsg() != 4326:
-        gdf = gdf.to_crs(epsg=4326)
-    logger.info("Passed validation check; CRS set to EPSG:4326")
 
     gdf_exploded = gdf.explode(index_parts=False)
     
@@ -370,32 +363,58 @@ def run_program(geojson_data):
         logger.error ("Making dataframe fail, double check data validation")
         return False
     
-    # explode multipolygon to polyton
-    gdf_exploded = portrait_polygon(gdf)
+    # check CRS
+    crs_54099 = CRS.from_proj4("+proj=spilhaus +lat_0=-49.56371678 +lon_0=66.94970198 +azi=40.17823482 +k_0=1.4142135623731 +rot=45 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs")
+    def is_spilhaus_54099(crs) -> bool:
+        if crs is None:
+            return False
+        try:
+            # 1. 直接比 ESRI authority code（处理 urn:ogc:def:crs:ESRI::54099 的情况）
+            auth = crs.to_authority()  # 返回 ('ESRI', '54099') 或 None
+            if auth and auth[0] == "ESRI" and auth[1] == "54099":
+                return True
+            # 2. 用 pyproj 的等价性判断（处理 proj4 等其他形式）
+            return crs.equals(crs_54099)
+        except Exception:
+            return False
 
-    # check each polgyon; label inter number with boundary 
-    gdf_inter_label = label_inter_number(gdf_exploded)
+    # main logic
+    if is_spilhaus_54099(gdf.crs):
+        logger.info("Only repair data: CRS is ESRI:54099")
+        gdf_processed = repair_geodataframe(gdf_inter_label)
+        result = regroup(gdf_processed)
+        logger.info("Data Repair Finished")
+        return result
 
-    # change CRS to 54099
-    gdf_inter_label["exterior_54099"] = gdf_inter_label["exterior"].apply(lambda geom: change_crs(geom) if geom else None)
-    gdf_inter_label["interior_54099"] = gdf_inter_label["interior"].apply(lambda geom: change_crs(geom) if geom else None)
-    gdf_inter_label["line_point_54099"] = gdf_inter_label["geometry"].apply(
-    lambda geom: change_crs(geom)
-    if geom is not None and geom.geom_type in ["Point", "LineString"]
-    else None
-)
+    # if not 54099 turn too 4326
+    if gdf.crs is None:
+        gdf = gdf.set_crs("EPSG:4326")
+    elif gdf.crs.to_epsg() != 4326:
+        gdf = gdf.to_crs(epsg=4326)
+        
+        logger.info("Passed validation check; CRS set to EPSG:4326")
+        # explode multipolygon to polyton
+        gdf_exploded = portrait_polygon(gdf)
 
-    # check if need repair
-    gdf_processed = repair_geodataframe(gdf_inter_label)
-    # print(gdf_processed.columns.to_list())
+        # check each polgyon; label inter number with boundary 
+        gdf_inter_label = label_inter_number(gdf_exploded)
 
-    result = regroup(gdf_processed)
-    # print(result)
-    # export result
-    # result.to_file("Fixed_world.geojson", driver = "GeoJSON")
-    logger.info("Data Transform Finished")
-    return result
-    # return result.to_json()
+        # change CRS to 54099
+        gdf_inter_label["exterior_54099"] = gdf_inter_label["exterior"].apply(lambda geom: change_crs(geom) if geom else None)
+        gdf_inter_label["interior_54099"] = gdf_inter_label["interior"].apply(lambda geom: change_crs(geom) if geom else None)
+        gdf_inter_label["line_point_54099"] = gdf_inter_label["geometry"].apply(
+        lambda geom: change_crs(geom)
+        if geom is not None and geom.geom_type in ["Point", "LineString"]
+        else None
+    )
+        # check if need repair
+        gdf_processed = repair_geodataframe(gdf_inter_label)
+        # print(gdf_processed.columns.to_list())
+
+        result = regroup(gdf_processed)
+        logger.info("Data Transform Finished")
+        return result
+  
     
 
 # if __name__ == "__main__":
