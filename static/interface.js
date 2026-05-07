@@ -144,7 +144,8 @@ function downloadGeoJSON(data) {
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URLSearchParams.download = "processed.geojson";
+  a.href = url;
+  a.download = "processed.geojson";
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -201,13 +202,13 @@ function setupSubmitForm() {
         uploadedGeojsonLayer = null;
       }
       uploadedGeojsonLayer = loadGeoJSONToLeaflet(processed_result);
-      const featureCount = countGeoJSONFeature(processed_result);
+      const featureCount = countGeoJSONFeatures(processed_result);
       setSubmitStatus(
-        `Upload finished, added ${featureCount} feature to the map。`,
+        `Upload finished, added ${featureCount} feature to the map.`,
         "success",
       );
       lastProcessedResult = processed_result;
-      suubmitButton.textContent = "Download";
+      submitButton.textContent = "Download";
       submitButton.dataset.mode = "download";
     } catch (err) {
       setSubmitStatus(`Error in process geojson: ${err}`);

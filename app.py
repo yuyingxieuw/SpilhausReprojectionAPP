@@ -1,7 +1,6 @@
 """
 Create & Manage API
 """
-
 from flask import Flask, jsonify, request, render_template
 from scripts.workflow_poly import run_program
 
@@ -10,6 +9,10 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return render_template("index.html")
+
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204 
 
 @app.route("/api/process", methods=["POST"])
 def process_geojson():
