@@ -138,6 +138,17 @@ async function readGeoJSONFile(file) {
   });
 }
 
+function downloadGeoJSON(data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/geo+json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = URLSearchParams.download = "processed.geojson";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function setupSubmitForm() {
   const form = document.getElementById("submitForm");
   const fileInput = document.getElementById("geojsonFile");
@@ -147,6 +158,8 @@ function setupSubmitForm() {
 
   if (!form || !fileInput || !textInput || !submitButton || !cleanButton)
     return;
+
+  let lastProcessedResult = null;
 
   fileInput.addEventListener("change", async () => {
     const [file] = fileInput.files;
@@ -163,6 +176,12 @@ function setupSubmitForm() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    if (submitButton.dataset.mode === "download") {
+      downloadGeoJSON(lastProcessedResult);
+      return;
+    }
+
     submitButton.disabled = true;
     setSubmitStatus("Submiting...");
 
@@ -170,7 +189,7 @@ function setupSubmitForm() {
       const rawGeoJSON = textInput.value.trim();
 
       if (!rawGeoJSON) {
-        throw new Error("Please upload or paste GeoJSON。");
+        throw new Error("Please upload or paste GeoJSON");
       }
 
       const geojson = JSON.parse(rawGeoJSON);
@@ -182,11 +201,14 @@ function setupSubmitForm() {
         uploadedGeojsonLayer = null;
       }
       uploadedGeojsonLayer = loadGeoJSONToLeaflet(processed_result);
-      const featureCount = countGeoJSONFeatures(processed_result);
+      const featureCount = countGeoJSONFeature(processed_result);
       setSubmitStatus(
         `Upload finished, added ${featureCount} feature to the map。`,
         "success",
       );
+      lastProcessedResult = processed_result;
+      suubmitButton.textContent = "Download";
+      submitButton.dataset.mode = "download";
     } catch (err) {
       setSubmitStatus(`Error in process geojson: ${err}`);
     } finally {
@@ -202,6 +224,9 @@ function setupSubmitForm() {
       uploadedGeojsonLayer = null;
     }
 
+    lastProcessedResult = null;
+    submitButton.textContent = "Submit";
+    submitButton.dataset.mode = "";
     setSubmitStatus("");
   });
 }
