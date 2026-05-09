@@ -211,7 +211,7 @@ function setupSubmitForm() {
         `Upload finished, added ${featureCount} feature to the map.`,
         "success",
       );
-      lastProcessedResult = processed_result;
+      lastProcessedResult = result_after_repair;
       submitButton.textContent = "Download";
       submitButton.dataset.mode = "download";
     } catch (err) {
@@ -237,7 +237,9 @@ function setupSubmitForm() {
 }
 
 function setupDataToggle() {
-  const radios = document.querySelectorAll('.data-toggle__item input[type="radio"]');
+  const radios = document.querySelectorAll(
+    '.data-toggle__item input[type="radio"]',
+  );
 
   radios.forEach((radio) => {
     radio.addEventListener("change", () => {
@@ -335,7 +337,7 @@ function loadGeoJSONToLeaflet(data, options = {}) {
   const defaultPointToLayer = (feature, latlng) => {
     return L.circleMarker(latlng, {
       radius: 6,
-      weight: 1,
+      weight: 1.3,
       fillOpacity: 0.8,
     });
   };
@@ -346,7 +348,7 @@ function loadGeoJSONToLeaflet(data, options = {}) {
     if (geomType === "LineString" || geomType === "MultiLineString") {
       return {
         color: "#0f5132",
-        weight: 1,
+        weight: 1.3,
         opacity: 0.8,
       };
     }
@@ -354,8 +356,8 @@ function loadGeoJSONToLeaflet(data, options = {}) {
     if (geomType === "Polygon" || geomType === "MultiPolygon") {
       return {
         color: "#0f5132",
-        weight: 1,
-        fillColor: "#2a9d8f",
+        weight: 1.3,
+        fillColor: "#a9c1beff",
         fillOpacity: 0.32,
       };
     }
