@@ -2,6 +2,7 @@
 Script to manage workflow process geojson data
 Call by Flask APP -- app.py
 """
+import json
 import logging
 import geopandas as gpd
 import pandas as pd
@@ -398,5 +399,7 @@ def run_program(geojson_data):
     return result.to_json()
   
     
-# if __name__ == "__main__":
-#     run_program(geojson_data) 
+if __name__ == "__main__":
+    with open("data/finlay.geojson", "r", encoding="utf-8") as f:
+        geojson_data = json.load(f)
+    run_program(geojson_data) 

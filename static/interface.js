@@ -325,7 +325,7 @@ function loadGeoJSONToLeaflet(data, options = {}) {
     if (geomType === "LineString" || geomType === "MultiLineString") {
       return {
         color: "#0f5132",
-        weight: 3,
+        weight: 1.5,
         opacity: 1,
       };
     }

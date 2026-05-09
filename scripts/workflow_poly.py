@@ -267,7 +267,8 @@ def regroup_to_multipolygon(gdf_processed):
     """
     1. regroup polygon to multi-polygon based original index
     """
-    
+    print("-------------DEBUT: GDF before regroup--------------")
+    print(gdf_processed)
     def geom_to_polys(geom):
         if geom is None or geom.is_empty:
             return []

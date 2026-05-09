@@ -2,7 +2,7 @@
 Create & Manage API
 """
 from flask import Flask, jsonify, request, render_template
-from scripts.workflow_poly import run_program
+from scripts.workflow import run_program
 
 app = Flask(__name__)
 
