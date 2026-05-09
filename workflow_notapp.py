@@ -358,11 +358,13 @@ def regroup(gdf_processed):
     gdf_final = gpd.GeoDataFrame(attrs, geometry=geom, crs = "ESRI:54099")
     return gdf_final
 
-def run_program(geojson_data):
+def run_program():
     """
     main workflow
     """
-    
+    with open("data/finlay.geojson", "r", encoding="utf-8") as f:
+        geojson_data = json.load(f)
+        
     gdf_exploded = normalize_inital_data(geojson_data)
 
     if gdf_exploded is False:
@@ -381,7 +383,7 @@ def run_program(geojson_data):
 
     # check each polgyon; label inter number with boundary 
     gdf_inter_label = label_inter_number(gdf_protrait)
-
+ 
     # change CRS to 54099
     gdf_inter_label["exterior_54099"] = gdf_inter_label["exterior"].apply(lambda geom: change_crs(geom) if geom else None)
     gdf_inter_label["interior_54099"] = gdf_inter_label["interior"].apply(lambda geom: change_crs(geom) if geom else None)
@@ -396,10 +398,9 @@ def run_program(geojson_data):
 
     result = regroup(gdf_processed)
     logger.info("Data Transform Finished")
-    return result.to_json()
+    return result
   
     
 if __name__ == "__main__":
-    with open("data/finlay.geojson", "r", encoding="utf-8") as f:
-        geojson_data = json.load(f)
-    run_program(geojson_data) 
+    
+    run_program() 

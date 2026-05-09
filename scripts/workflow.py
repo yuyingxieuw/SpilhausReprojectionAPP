@@ -22,7 +22,7 @@ def normalize_inital_data(data):
     2. turn geojson data to geopands file
     3. check validation of each feature
     4. return false if there's any invalid geometry
-    5. return exploded dataframe
+    5. return normalized dataframe
     """
     logger.debug("Parsing origional file../")
     #gdf = gpd.read_file(in_path)
@@ -57,14 +57,17 @@ def normalize_inital_data(data):
             logger.error("List has invalid geom.")
             return False
 
-    gdf_exploded = gdf.explode(index_parts=False)
+    gdf_normalized = gdf.explode(index_parts=False)
     
-    return gdf_exploded
+    return gdf_normalized
 
-def portrait_dataframe(gdf_exploded):
+def portrait_dataframe(gdf_normalized):
     """
-    1. extract exterior and interior for Polygon
+    1. explode dataframe
+    2. extract exterior and interior for Polygon
     """
+    gdf_exploded = gdf_normalized.explode(index_parts=False)
+
     # add exterior column -> LinearRing
     # add interior column -> list[LinearRing] or []
     gdf_exploded["has_interior"] = gdf_exploded.geometry.apply(
@@ -356,27 +359,32 @@ def regroup(gdf_processed):
 
     gdf_final = gpd.GeoDataFrame(attrs, geometry=geom, crs = "ESRI:54099")
     return gdf_final
+    
+    
 
 def run_program(geojson_data):
     """
     main workflow
     """
-    
-    gdf_exploded = normalize_inital_data(geojson_data)
+    gdf_normalized = normalize_inital_data(geojson_data)
 
-    if gdf_exploded is False:
+    if gdf_normalized is False:
         logger.error ("Making dataframe fail, double check data validation")
         return False
-    
+
     # check CRS
-    if gdf_exploded.crs is None:
-        gdf_exploded = gdf_exploded.set_crs("EPSG:4326")
-    elif gdf_exploded.crs.to_epsg() != 4326:
-        gdf_exploded = gdf_exploded.to_crs(epsg=4326)
+    if gdf_normalized.crs is None:
+        gdf_normalized = gdf_normalized.set_crs("EPSG:4326")
+    elif gdf_normalized.crs.to_epsg() != 4326:
+        gdf_normalized = gdf_normalized.to_crs(epsg=4326)
         logger.info("Passed validation check; CRS set to EPSG:4326")
 
+    # get result_before_repair
+    crs_54099 = CRS.from_proj4("+proj=spilhaus +lat_0=-49.56371678 +lon_0=66.94970198 +azi=40.17823482 +k_0=1.4142135623731 +rot=45 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs")
+    result_before_repair = gdf_normalized.to_crs(crs_54099)
+
     # extract exterior and interior for polygon
-    gdf_protrait = portrait_dataframe(gdf_exploded)
+    gdf_protrait = portrait_dataframe(gdf_normalized)
 
     # check each polgyon; label inter number with boundary 
     gdf_inter_label = label_inter_number(gdf_protrait)
@@ -385,17 +393,17 @@ def run_program(geojson_data):
     gdf_inter_label["exterior_54099"] = gdf_inter_label["exterior"].apply(lambda geom: change_crs(geom) if geom else None)
     gdf_inter_label["interior_54099"] = gdf_inter_label["interior"].apply(lambda geom: change_crs(geom) if geom else None)
     gdf_inter_label["line_point_54099"] = gdf_inter_label["geometry"].apply(
-    lambda geom: change_crs(geom)
-    if geom is not None and geom.geom_type in ["Point", "LineString"]
-    else None
-)
-    # check if need repair
+        lambda geom: change_crs(geom)
+        if geom is not None and geom.geom_type in ["Point", "LineString"]
+        else None)
+
+    #repair
     gdf_processed = repair_geodataframe(gdf_inter_label)
     # print(gdf_processed.columns.to_list())
 
-    result = regroup(gdf_processed)
+    result_after_repair = regroup(gdf_processed)
     logger.info("Data Transform Finished")
-    return result.to_json()
+    return result_before_repair.to_json(), result_after_repair.to_json()
   
     
 # if __name__ == "__main__":

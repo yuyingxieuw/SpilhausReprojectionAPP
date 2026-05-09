@@ -22,18 +22,22 @@ def cut_line_to_parts(line, inter_number) ->list[tuple]:
         raise ValueError("Intersection number need > 0")
  
     # make it list of coords 
-    coords = get_coordinates(line).tolist()
 
     # find idx where the point has the biggest distance with next point a , b
     # p1 line[:]
+    coords = get_coordinates(line).tolist()
     logger.info("Cutting line coords based on No: %d of intersection point.", inter_number)
-    all_xy = list(coords)
-    arr = np.array(all_xy)
-    next_arr = np.roll(arr, -1, axis=0)
-    diff = next_arr - arr
-    dist = np.linalg.norm(diff, axis=1)
+    arr = np.array(coords)
+    if len(arr) < 2:
+        raise ValueError("Line must have at least 2 coordinates")
+
+    diff = np.diff(arr, axis=0)
+    dist = np.linalg.norm(diff, axis=1) 
+
     inter_number_int = int(inter_number)
-    top_idx = np.argsort(dist)[-inter_number_int:][::-1]
+    k = min(inter_number_int, len(dist))
+
+    top_idx = np.argpartition(dist, -k)[-k:]
     top_idx_sorted = np.sort(top_idx)
     logger.info ("max change index: %s", top_idx_sorted)
 

@@ -31,6 +31,7 @@ textarea {
 }
 
 .map-panel {
+  position: relative;
   height: 100%;
   border-right: 1px solid rgba(27, 27, 24, 0.12);
   background: #d7dde0;
@@ -42,6 +43,36 @@ textarea {
   z-index: 0;
   pointer-events: auto;
   display: block;
+}
+
+.data-toggle {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+
+  display: flex;
+  gap: 300px;
+}
+
+.data-toggle__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #3b3b3b;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+.data-toggle__item input[type="radio"] {
+  accent-color: #1e3a5f;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
 }
 
 .submit-panel {
@@ -136,7 +167,7 @@ h1 {
 }
 
 #submitButton {
-  background: #267370;
+  background: #1e3a5f;
   color: #ffffff;
 }
 
@@ -147,7 +178,7 @@ h1 {
 }
 
 #submitButton:hover {
-  background: #1f5f5d;
+  background: #002673;
 }
 
 #cleanButton:hover {
@@ -168,7 +199,7 @@ h1 {
 }
 
 .status[data-type="success"] {
-  color: #0f5132;
+  color: #002673;
 }
 
 .status[data-type="error"] {
@@ -223,9 +254,9 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .map-panel,
-  #mapSpilhaus {
+  .map-panel {
     height: 42vh;
+    flex-direction: column;
   }
 
   .map-panel {

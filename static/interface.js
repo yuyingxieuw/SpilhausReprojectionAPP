@@ -3,6 +3,8 @@ let metersProjection = null;
 let CRS_Spilhaus = null;
 let mapSpilhaus = null;
 let uploadedGeojsonLayer = null;
+let result_before_repair = null;
+let result_after_repair = null;
 
 const minx = -16857702.71589949;
 const miny = -17212325.962645144;
@@ -196,13 +198,15 @@ function setupSubmitForm() {
       const geojson = JSON.parse(rawGeoJSON);
       assertGeoJSONShape(geojson);
       const responseData = await sendToServer(geojson);
-      processed_result = responseData.result;
+      result_before_repair = responseData.result_before;
+      result_after_repair = responseData.result_after;
+
       if (uploadedGeojsonLayer) {
         mapSpilhaus.removeLayer(uploadedGeojsonLayer);
         uploadedGeojsonLayer = null;
       }
-      uploadedGeojsonLayer = loadGeoJSONToLeaflet(processed_result);
-      const featureCount = countGeoJSONFeatures(processed_result);
+      uploadedGeojsonLayer = loadGeoJSONToLeaflet(result_after_repair);
+      const featureCount = countGeoJSONFeatures(result_after_repair);
       setSubmitStatus(
         `Upload finished, added ${featureCount} feature to the map.`,
         "success",
@@ -229,6 +233,23 @@ function setupSubmitForm() {
     submitButton.textContent = "Submit";
     submitButton.dataset.mode = "";
     setSubmitStatus("");
+  });
+}
+
+function setupDataToggle() {
+  const radios = document.querySelectorAll('.data-toggle__item input[type="radio"]');
+
+  radios.forEach((radio) => {
+    radio.addEventListener("change", () => {
+      const data =
+        radio.value === "before" ? result_before_repair : result_after_repair;
+
+      if (!data) return;
+      if (uploadedGeojsonLayer) {
+        mapSpilhaus.removeLayer(uploadedGeojsonLayer);
+      }
+      uploadedGeojsonLayer = loadGeoJSONToLeaflet(data);
+    });
   });
 }
 
@@ -325,15 +346,15 @@ function loadGeoJSONToLeaflet(data, options = {}) {
     if (geomType === "LineString" || geomType === "MultiLineString") {
       return {
         color: "#0f5132",
-        weight: 1.5,
-        opacity: 1,
+        weight: 1,
+        opacity: 0.8,
       };
     }
     // Polygon
     if (geomType === "Polygon" || geomType === "MultiPolygon") {
       return {
         color: "#0f5132",
-        weight: 1.4,
+        weight: 1,
         fillColor: "#2a9d8f",
         fillOpacity: 0.32,
       };
@@ -367,5 +388,6 @@ createSpilhaus();
 addSpilhausTiles();
 // loadJSONdataPoly();
 setupSubmitForm();
+setupDataToggle();
 
 //loadCenterPoint();

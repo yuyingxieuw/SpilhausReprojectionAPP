@@ -30,6 +30,16 @@
     <main class="app-shell">
       <section class="map-panel" aria-label="Spilhaus tile preview">
         <div id="mapSpilhaus"></div>
+        <div class="data-toggle" role="group" aria-label="Data view selection">
+          <label class="data-toggle__item">
+            <input type="radio" name="dataView" value="after" checked />
+            Data after repair
+          </label>
+          <label class="data-toggle__item">
+            <input type="radio" name="dataView" value="before" />
+            Data before repair
+          </label>
+        </div>
       </section>
 
       <aside class="submit-panel" aria-labelledby="appTitle">
@@ -37,7 +47,7 @@
           <p class="eyebrow">Spilhaus Reprojection</p>
           <h1 id="appTitle">Spilhaus GeoJSON Reprojection</h1>
           <p>This project takes a GeoJSON file and transforms it into the Spilhaus projection. It automatically fixes the stray-line issue caused by reprojection. 
-            Suggested CRS: "EPSG:4326".
+            Suggested CRS: "EPSG:4326". 
           </p>
           <a href="https://github.com/yuyingxieuw/SpilhausReprojectionAPP" target="_blank" rel="noopener noreferrer">
             View on GitHub

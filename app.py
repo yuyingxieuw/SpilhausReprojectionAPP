@@ -17,8 +17,11 @@ def favicon():
 @app.route("/api/process", methods=["POST"])
 def process_geojson():
     data = request.get_json()
-    result = run_program(data)
-    return jsonify({"status": "success", "result": result})
+    result_before, result_after = run_program(data)
+    return jsonify({
+        "status": "success", 
+        "result_before": result_before,
+        "result_after": result_after})
 
 if __name__ == "__main__":
     app.run(debug=True)
