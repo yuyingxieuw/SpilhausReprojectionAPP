@@ -142,14 +142,16 @@ async function readGeoJSONFile(file) {
 
 function downloadGeoJSON(data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/geo+json",
+    type: "application/geo+json;charset=utf-8",
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = "processed.geojson";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 function setupSubmitForm() {
