@@ -200,8 +200,14 @@ function setupSubmitForm() {
       const geojson = JSON.parse(rawGeoJSON);
       assertGeoJSONShape(geojson);
       const responseData = await sendToServer(geojson);
-      result_before_repair = responseData.result_before;
-      result_after_repair = responseData.result_after;
+      result_before_repair =
+        typeof responseData.result_before === "string"
+          ? JSON.parse(responseData.result_before)
+          : responseData.result_before;
+      result_after_repair =
+        typeof responseData.result_after === "string"
+          ? JSON.parse(responseData.result_after)
+          : responseData.result_after;
 
       if (uploadedGeojsonLayer) {
         mapSpilhaus.removeLayer(uploadedGeojsonLayer);

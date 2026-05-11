@@ -276,7 +276,7 @@ def repair_geodataframe(gdf):
                         fixed_hole = remake_polygon_for_ring(interior_ring, in_inter_number)
                         if fixed_hole:
                             repaired_interior += 0
-                        fixed_hole_list.append(Polygon(fixed_hole))
+                        fixed_hole_list.append(fixed_hole)
                     elif in_inter_number == 0:
                         fixed_hole_list.append(interior_ring)
 
