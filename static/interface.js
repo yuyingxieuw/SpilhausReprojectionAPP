@@ -344,9 +344,10 @@ function loadGeoJSONToLeaflet(data, options = {}) {
 
   const defaultPointToLayer = (feature, latlng) => {
     return L.circleMarker(latlng, {
-      radius: 6,
-      weight: 1.3,
-      fillOpacity: 0.8,
+      color: "#0f5132",
+      radius: 2,
+      weight: 0.8,
+      fillOpacity: 0.85,
     });
   };
 
