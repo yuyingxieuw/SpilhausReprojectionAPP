@@ -5,3 +5,4 @@ numpy==2.3.2
 pandas==2.3.2
 pyproj<3.7
 shapely==2.1.1
+gunicorn==21.2.0
